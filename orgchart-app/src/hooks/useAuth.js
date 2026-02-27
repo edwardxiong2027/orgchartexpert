@@ -12,14 +12,19 @@ export function useAuth() {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         // Create user profile document on first sign-in
-        const userRef = doc(db, "users", firebaseUser.uid);
-        const userSnap = await getDoc(userRef);
-        if (!userSnap.exists()) {
-          await setDoc(userRef, {
-            email: firebaseUser.email,
-            displayName: firebaseUser.displayName || firebaseUser.email?.split("@")[0] || "User",
-            createdAt: new Date().toISOString(),
-          });
+        try {
+          const userRef = doc(db, "users", firebaseUser.uid);
+          const userSnap = await getDoc(userRef);
+          if (!userSnap.exists()) {
+            await setDoc(userRef, {
+              email: firebaseUser.email,
+              displayName: firebaseUser.displayName || firebaseUser.email?.split("@")[0] || "User",
+              createdAt: new Date().toISOString(),
+            });
+          }
+        } catch (err) {
+          console.error("Error creating user profile:", err);
+          // Don't block sign-in if profile creation fails
         }
         setUser(firebaseUser);
       } else {

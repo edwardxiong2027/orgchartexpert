@@ -14,20 +14,23 @@ export function useOrgData(userId, chartId) {
     }
 
     setLoading(true);
-    let unsubscribe;
+    setError(null);
 
-    try {
-      unsubscribe = subscribeToOrgMembers(userId, chartId, (data) => {
+    const unsubscribe = subscribeToOrgMembers(
+      userId,
+      chartId,
+      (data) => {
         setMembers(data);
         setLoading(false);
-      });
-    } catch (err) {
-      console.error("Error loading org data:", err);
-      setError(err.message);
-      setLoading(false);
-    }
+      },
+      (err) => {
+        console.error("Error loading org data:", err);
+        setError(err.message);
+        setLoading(false);
+      }
+    );
 
-    return () => unsubscribe && unsubscribe();
+    return () => unsubscribe();
   }, [userId, chartId]);
 
   return { members, loading, error };

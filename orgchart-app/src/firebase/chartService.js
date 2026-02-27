@@ -4,7 +4,6 @@ import {
   addDoc,
   updateDoc,
   getDocs,
-  deleteDoc,
   writeBatch,
   query,
   orderBy,
@@ -21,24 +20,39 @@ function chartDoc(userId, chartId) {
 }
 
 // Real-time listener for user's charts
-export function subscribeToCharts(userId, callback) {
+export function subscribeToCharts(userId, callback, onError) {
   const q = query(chartsCol(userId), orderBy("updatedAt", "desc"));
-  return onSnapshot(q, async (snapshot) => {
-    const charts = [];
-    for (const d of snapshot.docs) {
-      const data = d.data();
-      // Get member count
-      const membersSnap = await getDocs(
-        collection(db, "users", userId, "charts", d.id, "members")
-      );
-      charts.push({
-        id: d.id,
-        ...data,
-        memberCount: membersSnap.size,
-      });
+  return onSnapshot(
+    q,
+    async (snapshot) => {
+      const charts = [];
+      for (const d of snapshot.docs) {
+        const data = d.data();
+        // Get member count
+        try {
+          const membersSnap = await getDocs(
+            collection(db, "users", userId, "charts", d.id, "members")
+          );
+          charts.push({
+            id: d.id,
+            ...data,
+            memberCount: membersSnap.size,
+          });
+        } catch {
+          charts.push({
+            id: d.id,
+            ...data,
+            memberCount: 0,
+          });
+        }
+      }
+      callback(charts);
+    },
+    (err) => {
+      console.error("subscribeToCharts error:", err);
+      if (onError) onError(err);
     }
-    callback(charts);
-  });
+  );
 }
 
 // Create a new chart
@@ -63,7 +77,6 @@ export async function updateChart(userId, chartId, updates) {
 
 // Delete a chart and all its members
 export async function deleteChart(userId, chartId) {
-  // First delete all members in the subcollection
   const membersSnap = await getDocs(
     collection(db, "users", userId, "charts", chartId, "members")
   );

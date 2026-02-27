@@ -14,20 +14,22 @@ export function useDashboardData(userId) {
     }
 
     setLoading(true);
-    let unsubscribe;
+    setError(null);
 
-    try {
-      unsubscribe = subscribeToCharts(userId, (data) => {
+    const unsubscribe = subscribeToCharts(
+      userId,
+      (data) => {
         setCharts(data);
         setLoading(false);
-      });
-    } catch (err) {
-      console.error("Error loading dashboard:", err);
-      setError(err.message);
-      setLoading(false);
-    }
+      },
+      (err) => {
+        console.error("Error loading dashboard:", err);
+        setError(err.message);
+        setLoading(false);
+      }
+    );
 
-    return () => unsubscribe && unsubscribe();
+    return () => unsubscribe();
   }, [userId]);
 
   return { charts, loading, error };

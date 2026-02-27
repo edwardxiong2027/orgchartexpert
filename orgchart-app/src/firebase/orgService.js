@@ -21,15 +21,22 @@ function memberDoc(userId, chartId, memberId) {
 }
 
 // Real-time listener for org members within a chart
-export function subscribeToOrgMembers(userId, chartId, callback) {
+export function subscribeToOrgMembers(userId, chartId, callback, onError) {
   const q = query(membersCol(userId, chartId), orderBy("name"));
-  return onSnapshot(q, (snapshot) => {
-    const members = snapshot.docs.map((d) => ({
-      id: d.id,
-      ...d.data(),
-    }));
-    callback(members);
-  });
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const members = snapshot.docs.map((d) => ({
+        id: d.id,
+        ...d.data(),
+      }));
+      callback(members);
+    },
+    (err) => {
+      console.error("subscribeToOrgMembers error:", err);
+      if (onError) onError(err);
+    }
+  );
 }
 
 // Get all org members (one-time)
