@@ -22,7 +22,7 @@ const COLORS = [
   "#8B5E83", "#C4564A", "#D4A03C", "#6B7B8D", "#999999",
 ];
 
-export default function EditPanel({ member, members, onClose }) {
+export default function EditPanel({ member, members, userId, chartId, onClose }) {
   const [form, setForm] = useState({});
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -63,10 +63,10 @@ export default function EditPanel({ member, members, onClose }) {
           setSaving(false);
           return;
         }
-        await changeSupervisor(member.id, newSupId);
+        await changeSupervisor(userId, chartId, member.id, newSupId);
       }
 
-      await updateOrgMember(member.id, rest);
+      await updateOrgMember(userId, chartId, member.id, rest);
       toast.success(`Updated ${form.name}`);
     } catch (err) {
       toast.error("Failed to save: " + err.message);
@@ -76,7 +76,7 @@ export default function EditPanel({ member, members, onClose }) {
 
   async function handleDelete() {
     try {
-      await deleteOrgMember(member.id, members);
+      await deleteOrgMember(userId, chartId, member.id, members);
       toast.success(`Removed ${member.name}`);
       onClose();
     } catch (err) {

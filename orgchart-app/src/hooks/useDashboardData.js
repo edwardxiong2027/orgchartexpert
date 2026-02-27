@@ -1,14 +1,14 @@
 import { useState, useEffect } from "react";
-import { subscribeToOrgMembers } from "../firebase/orgService";
+import { subscribeToCharts } from "../firebase/chartService";
 
-export function useOrgData(userId, chartId) {
-  const [members, setMembers] = useState([]);
+export function useDashboardData(userId) {
+  const [charts, setCharts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (!userId || !chartId) {
-      setMembers([]);
+    if (!userId) {
+      setCharts([]);
       setLoading(false);
       return;
     }
@@ -17,18 +17,18 @@ export function useOrgData(userId, chartId) {
     let unsubscribe;
 
     try {
-      unsubscribe = subscribeToOrgMembers(userId, chartId, (data) => {
-        setMembers(data);
+      unsubscribe = subscribeToCharts(userId, (data) => {
+        setCharts(data);
         setLoading(false);
       });
     } catch (err) {
-      console.error("Error loading org data:", err);
+      console.error("Error loading dashboard:", err);
       setError(err.message);
       setLoading(false);
     }
 
     return () => unsubscribe && unsubscribe();
-  }, [userId, chartId]);
+  }, [userId]);
 
-  return { members, loading, error };
+  return { charts, loading, error };
 }

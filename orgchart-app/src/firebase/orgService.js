@@ -4,7 +4,6 @@ import {
   getDocs,
   addDoc,
   updateDoc,
-  deleteDoc,
   writeBatch,
   query,
   orderBy,
@@ -12,30 +11,37 @@ import {
 } from "firebase/firestore";
 import { db } from "./config";
 
-const COLLECTION = "orgMembers";
+// Helper to get subcollection paths
+function membersCol(userId, chartId) {
+  return collection(db, "users", userId, "charts", chartId, "members");
+}
 
-// Real-time listener for org members
-export function subscribeToOrgMembers(callback) {
-  const q = query(collection(db, COLLECTION), orderBy("name"));
+function memberDoc(userId, chartId, memberId) {
+  return doc(db, "users", userId, "charts", chartId, "members", memberId);
+}
+
+// Real-time listener for org members within a chart
+export function subscribeToOrgMembers(userId, chartId, callback) {
+  const q = query(membersCol(userId, chartId), orderBy("name"));
   return onSnapshot(q, (snapshot) => {
-    const members = snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
+    const members = snapshot.docs.map((d) => ({
+      id: d.id,
+      ...d.data(),
     }));
     callback(members);
   });
 }
 
 // Get all org members (one-time)
-export async function getOrgMembers() {
-  const q = query(collection(db, COLLECTION), orderBy("name"));
+export async function getOrgMembers(userId, chartId) {
+  const q = query(membersCol(userId, chartId), orderBy("name"));
   const snapshot = await getDocs(q);
-  return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
 
 // Add a new member
-export async function addOrgMember(member) {
-  const docRef = await addDoc(collection(db, COLLECTION), {
+export async function addOrgMember(userId, chartId, member) {
+  const docRef = await addDoc(membersCol(userId, chartId), {
     name: member.name,
     title: member.title,
     supervisorId: member.supervisorId || null,
@@ -53,8 +59,8 @@ export async function addOrgMember(member) {
 }
 
 // Update a member
-export async function updateOrgMember(id, updates) {
-  const ref = doc(db, COLLECTION, id);
+export async function updateOrgMember(userId, chartId, id, updates) {
+  const ref = memberDoc(userId, chartId, id);
   await updateDoc(ref, {
     ...updates,
     updatedAt: new Date().toISOString(),
@@ -62,48 +68,46 @@ export async function updateOrgMember(id, updates) {
 }
 
 // Delete a member and reassign their reports
-export async function deleteOrgMember(id, members) {
+export async function deleteOrgMember(userId, chartId, id, members) {
   const batch = writeBatch(db);
 
-  // Find subordinates and reassign them to the deleted member's supervisor
   const member = members.find((m) => m.id === id);
   const subordinates = members.filter((m) => m.supervisorId === id);
 
   for (const sub of subordinates) {
-    const subRef = doc(db, COLLECTION, sub.id);
+    const subRef = memberDoc(userId, chartId, sub.id);
     batch.update(subRef, {
       supervisorId: member?.supervisorId || null,
       updatedAt: new Date().toISOString(),
     });
   }
 
-  // Delete the member
-  batch.delete(doc(db, COLLECTION, id));
+  batch.delete(memberDoc(userId, chartId, id));
   await batch.commit();
 }
 
-// Change supervisor (move a person to report to someone else)
-export async function changeSupervisor(memberId, newSupervisorId) {
-  const ref = doc(db, COLLECTION, memberId);
+// Change supervisor
+export async function changeSupervisor(userId, chartId, memberId, newSupervisorId) {
+  const ref = memberDoc(userId, chartId, memberId);
   await updateDoc(ref, {
     supervisorId: newSupervisorId,
     updatedAt: new Date().toISOString(),
   });
 }
 
-// Move an entire subtree (a person and all their reports) under a new supervisor
-export async function moveSubtree(memberId, newSupervisorId) {
-  const ref = doc(db, COLLECTION, memberId);
+// Move an entire subtree under a new supervisor
+export async function moveSubtree(userId, chartId, memberId, newSupervisorId) {
+  const ref = memberDoc(userId, chartId, memberId);
   await updateDoc(ref, {
     supervisorId: newSupervisorId,
     updatedAt: new Date().toISOString(),
   });
 }
 
-// Seed initial org chart data
-export async function seedOrgData() {
-  const existing = await getDocs(collection(db, COLLECTION));
-  if (!existing.empty) return false; // Already seeded
+// Seed sample org chart data into a specific chart
+export async function seedOrgData(userId, chartId) {
+  const existing = await getDocs(membersCol(userId, chartId));
+  if (!existing.empty) return false;
 
   const batch = writeBatch(db);
 
@@ -129,7 +133,7 @@ export async function seedOrgData() {
   ];
 
   for (const m of members) {
-    const ref = doc(db, COLLECTION, m.id);
+    const ref = doc(db, "users", userId, "charts", chartId, "members", m.id);
     batch.set(ref, {
       name: m.name,
       title: m.title,

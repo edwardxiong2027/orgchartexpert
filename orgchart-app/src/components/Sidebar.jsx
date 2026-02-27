@@ -10,8 +10,10 @@ import {
   User,
   Building2,
   Upload,
+  ArrowLeft,
 } from "lucide-react";
 import { buildTree } from "../utils/layoutUtils";
+import { UNITS } from "../constants/units";
 
 export default function Sidebar({
   members,
@@ -22,10 +24,16 @@ export default function Sidebar({
   onExportPNG,
   onFitView,
   onSeedData,
+  chartName,
+  chartUnit,
+  onUnitChange,
+  onBackToDashboard,
 }) {
   const [search, setSearch] = useState("");
   const [expandedNodes, setExpandedNodes] = useState(new Set(["root"]));
   const tree = buildTree(members);
+
+  const unitInfo = UNITS.find((u) => u.value === chartUnit) || UNITS[0];
 
   const filteredMembers = search
     ? members.filter(
@@ -94,9 +102,36 @@ export default function Sidebar({
     <div className="w-72 bg-white border-r border-gray-200 flex flex-col h-full">
       {/* Header */}
       <div className="p-4 border-b border-gray-100">
-        <div className="flex items-center gap-2 mb-3">
-          <Building2 size={20} className="text-blue-600" />
-          <h1 className="text-lg font-bold text-gray-800">OrgChart Expert</h1>
+        {/* Back + Title */}
+        <div className="flex items-center gap-2 mb-2">
+          <button
+            onClick={onBackToDashboard}
+            className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors shrink-0"
+            title="Back to Dashboard"
+          >
+            <ArrowLeft size={16} className="text-gray-500" />
+          </button>
+          <div className="min-w-0">
+            <h1 className="text-sm font-bold text-gray-800 truncate">{chartName}</h1>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <span
+                className="inline-block px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider"
+                style={{ backgroundColor: unitInfo.bg, color: unitInfo.color }}
+              >
+                {unitInfo.label}
+              </span>
+              {/* Unit change dropdown */}
+              <select
+                value={chartUnit}
+                onChange={(e) => onUnitChange(e.target.value)}
+                className="text-[10px] text-gray-400 bg-transparent border-none cursor-pointer hover:text-gray-600 focus:outline-none"
+              >
+                {UNITS.map((u) => (
+                  <option key={u.value} value={u.value}>{u.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
         </div>
 
         {/* Actions */}

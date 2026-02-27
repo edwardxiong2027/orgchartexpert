@@ -8,7 +8,7 @@ const COLORS = [
   "#8B5E83", "#C4564A", "#D4A03C", "#6B7B8D", "#999999",
 ];
 
-export default function AddPersonModal({ members, onClose, preselectedSupervisor }) {
+export default function AddPersonModal({ members, userId, chartId, onClose, preselectedSupervisor }) {
   const [form, setForm] = useState({
     name: "",
     title: "",
@@ -31,7 +31,7 @@ export default function AddPersonModal({ members, onClose, preselectedSupervisor
 
     setSaving(true);
     try {
-      await addOrgMember({
+      await addOrgMember(userId, chartId, {
         ...form,
         supervisorId: form.supervisorId || null,
       });
